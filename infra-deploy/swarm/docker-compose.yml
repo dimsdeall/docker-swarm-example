@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == master-orchestra
+      restart_policy:
+        condition: on-failure
+    networks:
+      - backend
+
+  nginx-branch1:
+    image: nginx:alpine
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.hostname == brance-1
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "8081:80"
+    networks:
+      - backend
+
+  nginx-branch2:
+    image: nginx:alpine
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.hostname == branch-2
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "8082:80"
+    networks:
+      - backend
+
+volumes:
+  pgdata:
+
+networks:
+  backend:
