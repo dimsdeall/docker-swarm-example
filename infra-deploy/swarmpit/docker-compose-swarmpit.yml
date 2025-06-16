@@ -5,7 +5,7 @@ services:
   swarmpit:
     image: swarmpit/swarmpit:1.9.0 # Ganti dengan versi stabil terbaru yang Anda inginkan
     ports:
-      - "888:8080" # UI SwarmPit
+      - "3000:8080" # UI SwarmPit
     environment:
       - SWARMPIT_DB=couchdb://db:5984
       - SWARMPIT_INFLUXDB=http://influxdb:8086
