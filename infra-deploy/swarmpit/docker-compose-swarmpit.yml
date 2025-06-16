@@ -1,89 +1,90 @@
-
 version: '3.8'
 
 services:
   swarmpit:
-    image: swarmpit/swarmpit:1.9.0 # Ganti dengan versi stabil terbaru yang Anda inginkan
-    ports:
-      - "3000:8080" # UI SwarmPit
+    image: swarmpit/swarmpit:latest
     environment:
-      - SWARMPIT_DB=couchdb://db:5984
+      - SWARMPIT_DB=http://couchdb:5984
       - SWARMPIT_INFLUXDB=http://influxdb:8086
-      # - SWARMPIT_APP_SECRET=gantiDenganSecretAcakYangPanjang # Opsional: untuk keamanan sesi yang lebih baik
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - swarmpit-net
-    depends_on:
-      - db
-      - influxdb
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "3000:8080"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"] # Atau endpoint health API Swarmpit jika ada
-      interval: 30s
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 60s
       timeout: 10s
       retries: 3
+    networks:
+      - net
     deploy:
-      mode: replicated
-      replicas: 1
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
       placement:
-        constraints: [node.role == manager]
+        constraints:
+          - node.role == manager
 
-  db:
-    image: couchdb:2.3.0 # Pertimbangkan untuk menggunakan versi yang lebih baru jika kompatibel
+  couchdb:
+    image: couchdb:2.3.0
     volumes:
       - db-data:/opt/couchdb/data
     networks:
-      - swarmpit-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - net
     deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints: [node.role == manager]
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 256M
+        reservations:
+          cpus: '0.15'
+          memory: 128M
 
   influxdb:
-    image: influxdb:1.8 # Pertimbangkan untuk menggunakan versi yang lebih baru jika kompatibel
+    image: influxdb:1.8
     volumes:
-      - influxdb-data:/var/lib/influxdb
-    environment:
-      - INFLUXDB_DB=swarmpit
-      - INFLUXDB_ADMIN_USER=admin
-      - INFLUXDB_ADMIN_PASSWORD=admin123
-      # - INFLUXDB_HTTP_AUTH_ENABLED=true # Aktifkan jika Anda ingin semua akses HTTP memerlukan otentikasi
+      - influx-data:/var/lib/influxdb
     networks:
-      - swarmpit-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8086/ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - net
     deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints: [node.role == manager]
+      resources:
+        limits:
+          cpus: '0.60'
+          memory: 512M
+        reservations:
+          cpus: '0.30'
+          memory: 128M
 
-  agent:
-    image: swarmpit/agent:latest # Sebaiknya ganti dengan versi spesifik yang stabil
+  swarmpit_agent:
+    image: swarmpit/agent:latest
     environment:
-      - DOCKER_API_VERSION=1.35 # Periksa apakah versi ini masih relevan untuk lingkungan Anda
+      - DOCKER_API_VERSION=1.35
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
-      - swarmpit-net
+      - net
     deploy:
-      mode: global # Agen biasanya dijalankan di semua node atau node pekerja
-      # placement:
-      #   constraints: [node.role == worker] # Jika hanya ingin di worker
+      mode: global
+      labels:
+        swarmpit.agent: 'true'
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 64M
+        reservations:
+          cpus: '0.05'
+          memory: 32M
 
 networks:
-  swarmpit-net:
+  net:
     driver: overlay
 
 volumes:
   db-data:
-  influxdb-data:
+    driver: local
+  influx-data:
+    driver: local
