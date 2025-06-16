@@ -56,9 +56,6 @@ services:
       # - INFLUXDB_HTTP_AUTH_ENABLED=true # Aktifkan jika Anda ingin semua akses HTTP memerlukan otentikasi
     networks:
       - swarmpit-net
-    secrets:
-      - influxdb_admin_user
-      - influxdb_admin_password
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8086/ping"]
       interval: 30s
@@ -90,9 +87,3 @@ networks:
 volumes:
   db-data:
   influxdb-data:
-
-secrets:
-  influxdb_admin_user:
-    external: true
-  influxdb_admin_password:
-    external: true
